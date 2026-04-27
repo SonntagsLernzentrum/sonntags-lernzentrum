@@ -1,0 +1,287 @@
+import { useState } from "react";
+import { Plus, Download, CheckCircle, Clock, AlertCircle, Upload } from "lucide-react";
+import { useInvoices } from "../../hooks/useData";
+
+export default function StaffInvoices() {
+  const { invoices } = useInvoices();
+  const [showNewInvoice, setShowNewInvoice] = useState(false);
+  const [filter, setFilter] = useState<"alle" | "offen" | "bezahlt" | "überfällig">("alle");
+
+  const handleCreateInvoice = (e: React.FormEvent) => {
+    e.preventDefault();
+    alert("Rechnung wurde erstellt!");
+    setShowNewInvoice(false);
+  };
+
+  const handleDownload = (invoiceNr: string) => {
+    alert(`PDF-Download für Rechnung ${invoiceNr} wird gestartet...`);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "bezahlt":
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+            <CheckCircle className="w-4 h-4" />
+            Bezahlt
+          </span>
+        );
+      case "offen":
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
+            <Clock className="w-4 h-4" />
+            Offen
+          </span>
+        );
+      case "überfällig":
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
+            <AlertCircle className="w-4 h-4" />
+            Überfällig
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const filteredInvoices =
+    filter === "alle"
+      ? invoices
+      : invoices.filter((inv) => inv.status === filter);
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Rechnungsverwaltung
+            </h2>
+            <p className="text-gray-600">
+              Rechnungen erstellen und verwalten
+            </p>
+          </div>
+          <button
+            onClick={() => setShowNewInvoice(!showNewInvoice)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Neue Rechnung
+          </button>
+        </div>
+      </div>
+
+      {/* Neue Rechnung erstellen */}
+      {showNewInvoice && (
+        <div className="bg-white rounded-lg shadow-sm p-6 border-2 border-indigo-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Neue Rechnung erstellen
+          </h3>
+          <form onSubmit={handleCreateInvoice} className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rechnungsnummer
+                </label>
+                <input
+                  type="text"
+                  placeholder="RE-2604-001"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Datum
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Beschreibung
+                </label>
+                <input
+                  type="text"
+                  placeholder="Einzelstunde Nachhilfe Mittelschule"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Betrag (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="35.00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Anfahrtszone
+                </label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                  <option value="1">Zone 1 (0 €)</option>
+                  <option value="2">Zone 2 (5 €)</option>
+                  <option value="3">Zone 3 (10 €)</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  MwSt. Information
+                </label>
+                <input
+                  type="text"
+                  value="0% §4 Nr.21a)bb) UStG Umsatzsteuerfrei"
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PDF hochladen
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">
+                    PDF-Datei hier ablegen oder klicken zum Auswählen
+                  </p>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                  >
+                    Datei auswählen
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowNewInvoice(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Rechnung erstellen
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Filter */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex gap-2">
+          {["alle", "offen", "bezahlt", "überfällig"].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status as any)}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filter === status
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Rechnungsliste */}
+      <div className="space-y-4">
+        {filteredInvoices.map((invoice) => (
+          <div
+            key={invoice.id}
+            className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {invoice.rechnungsNr}
+                  </h3>
+                  {getStatusBadge(invoice.status)}
+                </div>
+                <p className="text-sm text-gray-600">
+                  Rechnungsdatum: {new Date(invoice.datum).toLocaleDateString("de-DE")}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDownload(invoice.rechnungsNr)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-4">
+              <div className="grid gap-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-700">{invoice.beschreibung}</span>
+                  <span className="font-medium">{invoice.betrag.toFixed(2)} €</span>
+                </div>
+
+                {invoice.anfahrtzonenbetrag > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      Anfahrtzonenbetrag (Zone {invoice.anfahrtszone})
+                    </span>
+                    <span className="text-gray-600">
+                      {invoice.anfahrtzonenbetrag.toFixed(2)} €
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-sm text-gray-600">{invoice.mwst}</div>
+
+                <div className="flex justify-between pt-3 border-t border-gray-200">
+                  <span className="font-semibold text-gray-900">Gesamtbetrag</span>
+                  <span className="font-bold text-lg text-gray-900">
+                    {invoice.gesamtbetrag.toFixed(2)} €
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {filteredInvoices.length === 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <p className="text-gray-600">
+            Keine Rechnungen in dieser Kategorie vorhanden
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
