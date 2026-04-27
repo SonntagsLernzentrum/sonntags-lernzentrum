@@ -3,9 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { LogOut, FileText, Users, Calendar, CreditCard } from 'lucide-react';
 import './style.css';
 
-const API_URL = import.meta.env.VITE_API_URL;https://sonntags-lernzentrum.onrender.com
+const API = import.meta.env.VITE_API_URL || "https://sonntags-lernzentrum.onrender.com";
 
-fetch(`${API_URL}/login`)
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(null);
