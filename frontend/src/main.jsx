@@ -1,13 +1,68 @@
-import React,{useEffect,useState}from'react';import{createRoot}from'react-dom/client';import{api,setSession,user,logout}from'./api/client.js';import'./styles/app.css';
-function Nav({u}){return <div className="nav"><div className="brand">Sonntags Lernzentrum</div>{u?.type==='parent'&&<><a href="#parent">Elternportal</a><a href="#konto">Mein Konto</a></>}{u?.type==='staff'&&<><a href="#admin">Dashboard</a><a href="#students">Schüler</a><a href="#contracts">Verträge</a><a href="#invoices">Rechnungen</a><a href="#parents">Eltern</a></>} {u&&<button onClick={logout}>Abmelden</button>}</div>}
-function Login({onLogin}){const[mode,setMode]=useState('parent');const[id,setId]=useState('K10001');const[pw,setPw]=useState('Start123!');const[err,setErr]=useState('');async function submit(e){e.preventDefault();setErr('');try{const data=await api(mode==='parent'?'/auth/parent-login':'/auth/staff-login',{method:'POST',body:mode==='parent'?{customerNumber:id,password:pw}:{personnelNumber:id,password:pw}});setSession(data);onLogin(data.user)}catch(e){setErr(e.message)}}return <div className="container"><div className="card" style={{maxWidth:460,margin:'60px auto'}}><h1>Login</h1><p className="muted">Eltern: Kundennummer + Passwort. Personal: Personalnummer + Passwort.</p><div className="row"><button className={mode==='parent'?'btn':'btn secondary'} onClick={()=>{setMode('parent');setId('K10001')}}>Eltern</button><button className={mode==='staff'?'btn':'btn secondary'} onClick={()=>{setMode('staff');setId('LV432085')}}>Mitarbeiter</button></div><form onSubmit={submit}><label>{mode==='parent'?'Kundennummer':'Personalnummer'}</label><input value={id}onChange={e=>setId(e.target.value)}/><label>Passwort</label><input type="password" value={pw}onChange={e=>setPw(e.target.value)}/>{err&&<div className="error">{err}</div>}<button>Einloggen</button></form><p className="muted">Demo Personal: LV432085, L658934, B45385 · Passwort Start123!</p></div></div>}
-function ParentPortal(){const[d,setD]=useState(null),[inv,setInv]=useState([]),[kids,setKids]=useState([]),[contracts,setContracts]=useState([]);useEffect(()=>{api('/parent/dashboard').then(setD);api('/parent/invoices').then(setInv);api('/parent/children').then(setKids);api('/parent/contracts').then(setContracts)},[]);async function request(contractId,type){const message=prompt(type==='kündigung'?'Grund der Kündigung':'Grund des Widerrufs')||'';await api('/parent/requests',{method:'POST',body:{contractId,type,message}});alert('Anfrage übermittelt')}return <div className="container"><div className="hero"><h1>{d?.parent?`${new Date().getHours()<11?'Guten Morgen':new Date().getHours()<18?'Guten Tag':'Guten Abend'}, ${d.parent.salutation||''} ${d.parent.last_name}`:'Elternportal'}</h1><span className="badge">Zahlungsweise: {d?.parent?.payment_method}</span></div><div className="grid"><div className="card"><h2>Termine</h2><p>Nächster Termin und Terminvereinbarung sind für Google Calendar API vorbereitet.</p><button>Termin vereinbaren</button></div><div className="card"><h2>Offene Rechnung</h2>{d?.nextInvoice?<p><b>{d.nextInvoice.invoice_number}</b><br/>{d.nextInvoice.title}<br/>Gesamt: {Number(d.nextInvoice.total).toFixed(2)} €</p>:<p>Keine offene Rechnung.</p>}</div></div><h2>Rechnungen</h2><div className="grid">{inv.map(x=><div className="card" key={x.id}><b>{x.invoice_number}</b><p>{x.title}</p><p>Betrag: {Number(x.amount).toFixed(2)} €<br/>Anfahrtzonenbetrag: {Number(x.travel_zone_amount).toFixed(2)} €<br/>Anfahrtszone: {x.travel_zone}<br/>{x.vat_text}<br/><b>Gesamtbetrag: {Number(x.total).toFixed(2)} €</b></p>{x.pdf_file&&<a className="btn" href={'http://localhost:4000/'+x.pdf_file} target="_blank">PDF Download</a>}</div>)}</div><h2>Meine Kinder</h2><div className="grid">{kids.map(k=><div className="card" key={k.id}><h3>{k.name}</h3><p>Klasse: {k.class_name}<br/>Schule: {k.school}<br/>Schulart: {k.school_type}<br/>Fach: {k.subject}</p></div>)}</div><h2>Verträge</h2><div className="grid">{contracts.map(c=><div className="card" key={c.id}><h3>{c.contract_number}</h3><p>Art: {c.type}<br/>Schüler: {c.student}<br/>Fach: {c.subject}<br/>Tarif: {c.tariff}<br/>Vertragsabschluss: {c.start_date}<br/>Vertragsende: {c.end_date}</p><button onClick={()=>request(c.id,'kündigung')} className="danger">Kündigen</button> <button onClick={()=>request(c.id,'widerruf')} className="btn secondary">Widerrufen</button></div>)}</div></div>}
-function Admin(){const[d,setD]=useState(null),[students,setStudents]=useState([]),[contracts,setContracts]=useState([]),[invoices,setInvoices]=useState([]),[parents,setParents]=useState([]);function load(){api('/admin/dashboard').then(setD);api('/admin/students').then(setStudents);api('/admin/contracts').then(setContracts);api('/admin/invoices').then(setInvoices).catch(()=>{});api('/admin/parents').then(setParents).catch(()=>{})}useEffect(load,[]);return <div className="container"><h1>Mitarbeiter Dashboard</h1><div className="grid"><div className="card"><h2>Rolle</h2><p>{d?.role}</p></div><div className="card"><h2>Offene Rechnungen</h2><p>{d?.openInvoices}</p></div><div className="card"><h2>Kündigung/Widerruf</h2><p>{d?.newRequests}</p></div></div><Section id="students" title="Schüler & Teilnehmerverwaltung" rows={students} cols={['name','class_name','school','school_type','subject','tariff']}/><CreateStudent reload={load}/><Section id="contracts" title="Vertragsübersicht" rows={contracts} cols={['contract_number','type','student','subject','tariff','start_date','end_date','status']}/><CreateContract reload={load} students={students}/><Section id="invoices" title="Rechnungen" rows={invoices} cols={['invoice_number','parent','title','amount','travel_zone_amount','travel_zone','total','status']}/><CreateInvoice reload={load} parents={parents}/><Section id="parents" title="Elternverwaltung" rows={parents} cols={['customer_number','salutation','first_name','last_name','email','phone','city','payment_method']}/><CreateParent reload={load}/></div>}
-function Section({id,title,rows,cols}){return <><h2 id={id}>{title}</h2><table className="table"><thead><tr>{cols.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i}>{cols.map(c=><td key={c}>{String(r[c]??'')}</td>)}</tr>)}</tbody></table></>}
-function CreateStudent({reload}){const[b,setB]=useState({parentId:1,name:'',birthdate:'',className:'',schoolId:1,schoolType:'Mittelschule',tariffId:2,subject:'Mathematik'});return <Form title="Schüler hinzufügen" b={b} setB={setB} fields={['parentId','name','birthdate','className','schoolId','schoolType','tariffId','subject']} submit={async()=>{await api('/admin/students',{method:'POST',body:b});reload()}}/>}
-function CreateContract({reload,students}){const[b,setB]=useState({contractNumber:'NH4-',type:'Nachhilfe',studentId:1,subject:'Mathematik',tariff:'FörderPlus',startDate:'2026-02-14',endDate:'2026-07-31'});return <Form title="Vertrag erstellen" b={b} setB={setB} fields={['contractNumber','type','studentId','subject','tariff','startDate','endDate']} submit={async()=>{await api('/admin/contracts',{method:'POST',body:b});reload()}}/>}
-function CreateInvoice({reload,parents}){const[b,setB]=useState({parentId:1,invoiceNumber:'RE-2604-001',title:'Einzelstunde Nachhilfe Mittelschule',amount:35,travelZoneAmount:0,travelZone:1,dueDate:'2026-05-03',status:'offen'});return <Form title="Rechnung hinzufügen" b={b} setB={setB} fields={['parentId','invoiceNumber','title','amount','travelZoneAmount','travelZone','dueDate','status']} submit={async()=>{await api('/admin/invoices',{method:'POST',body:b});reload()}}/>}
-function CreateParent({reload}){const[b,setB]=useState({customerNumber:'K',salutation:'Frau',firstName:'',lastName:'',email:'',phone:'',street:'',zip:'',city:'',soleCustody:false,paymentMethod:'Rechnung 14 Tage'});return <Form title="Eltern anlegen" b={b} setB={setB} fields={['customerNumber','salutation','firstName','lastName','email','phone','street','zip','city','paymentMethod']} submit={async()=>{await api('/admin/parents',{method:'POST',body:b});reload()}}/>}
-function Form({title,b,setB,fields,submit}){return <div className="card"><h3>{title}</h3><div className="row">{fields.map(f=><div key={f}><label>{f}</label><input value={b[f]??''} onChange={e=>setB({...b,[f]:e.target.value})}/></div>)}</div><button onClick={submit}>Speichern</button></div>}
-function App(){const[u,setU]=useState(user());return <div className="app"><Nav u={u}/>{!u?<Login onLogin={setU}/>:u.type==='parent'?<ParentPortal/>:<Admin/>}</div>}
+import React, { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { LogOut, FileText, Users, Calendar, CreditCard } from 'lucide-react';
+import './style.css';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:10000';
+
+function App() {
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [user, setUser] = useState(null);
+  const [data, setData] = useState({ invoices: [], students: [], contracts: [], dashboard: null });
+  const [login, setLogin] = useState('LV432085');
+  const [password, setPassword] = useState('Start123!');
+  const [error, setError] = useState('');
+
+  async function api(path) {
+    const res = await fetch(API + path, { headers: { Authorization: 'Bearer ' + token } });
+    return res.json();
+  }
+
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([api('/api/me'), api('/api/invoices'), api('/api/students'), api('/api/contracts'), api('/api/admin/dashboard')])
+      .then(([me, invoices, students, contracts, dashboard]) => {
+        setUser(me.user);
+        setData({ invoices, students, contracts, dashboard });
+      })
+      .catch(() => logout());
+  }, [token]);
+
+  async function doLogin(e) {
+    e.preventDefault();
+    setError('');
+    const res = await fetch(API + '/api/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password })
+    });
+    const json = await res.json();
+    if (!res.ok) return setError(json.message || 'Fehler');
+    localStorage.setItem('token', json.token);
+    setToken(json.token);
+    setUser(json.user);
+  }
+
+  function logout() { localStorage.removeItem('token'); setToken(null); setUser(null); }
+
+  if (!token) return <main className="loginPage"><form className="loginBox" onSubmit={doLogin}>
+    <h1>Sonntags Lernzentrum</h1><p>Portal Login</p>
+    <label>Kundennummer / Personalnummer</label><input value={login} onChange={e=>setLogin(e.target.value)} />
+    <label>Passwort</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} />
+    {error && <div className="error">{error}</div>}
+    <button>Anmelden</button>
+    <small>Demo: LV432085, L658934, B45385 oder K10001 / Start123!</small>
+  </form></main>;
+
+  return <main className="app">
+    <aside><h2>SLZ</h2><p>{user?.role}</p><nav><a>Dashboard</a><a>Rechnungen</a><a>Schüler</a><a>Verträge</a><a>Konto</a></nav><button onClick={logout}><LogOut size={16}/> Abmelden</button></aside>
+    <section className="content"><header><h1>Guten Tag, {user?.lastName}</h1><p>Willkommen im Sonntags Lernzentrum Portal.</p></header>
+      <div className="cards"><Card icon={<FileText/>} title="Offene Rechnungen" value={data.dashboard?.openInvoices ?? data.invoices.length}/><Card icon={<Users/>} title="Schüler" value={data.students.length}/><Card icon={<Calendar/>} title="Verträge" value={data.contracts.length}/><Card icon={<CreditCard/>} title="Zahlungen" value="Aktiv"/></div>
+      <Panel title="Rechnungen">{data.invoices.map(i=><div className="row" key={i.id}><b>{i.number}</b><span>{i.title}</span><span>{i.total}</span><button>PDF</button></div>)}</Panel>
+      <Panel title="Meine Kinder / Schüler">{data.students.map(s=><div className="row" key={s.id}><b>{s.name}</b><span>Klasse {s.grade}</span><span>{s.school}</span></div>)}</Panel>
+      <Panel title="Verträge">{data.contracts.map(c=><div className="contract" key={c.id}><b>{c.number}</b><p>{c.type} · {c.student} · {c.subject} · {c.tariff}</p><p>{c.start} bis {c.end}</p><button>Kündigung anfragen</button></div>)}</Panel>
+    </section>
+  </main>;
+}
+function Card({icon,title,value}){return <div className="card">{icon}<span>{title}</span><b>{value}</b></div>}
+function Panel({title,children}){return <section className="panel"><h2>{title}</h2>{children}</section>}
+
 createRoot(document.getElementById('root')).render(<App/>);

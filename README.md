@@ -1,101 +1,77 @@
-# Sonntags Lernzentrum App - Vollständiges Code-Grundgerüst
+# Sonntags Lernzentrum Portal WebApp
 
-2-in-1 Web-App mit Elternportal und Mitarbeiterportal.
+Neue Version ohne Hetzner.
 
-## Technik
-- Backend: Node.js, Express, JWT, MySQL, Uploads
-- Frontend: React + Vite
-- Datenbank: MySQL
-- Server geeignet für Hetzner VPS
+## Hosting
 
-## Funktionen enthalten
+- Frontend: Vercel
+- Backend: Render
+- Datenbank: Render PostgreSQL oder externe MySQL-Datenbank
 
-### Eltern
-- Login mit Kundennummer + Passwort
-- Passwort-zurücksetzen API vorbereitet
-- Dashboard mit Tagesgruß
-- Rechnungsanzeige im gewünschten Blockformat
-- PDF-Download vorbereitet
-- Meine Kinder
-- Dokumente API je Schüler
-- Vertragsdaten
-- Kündigung/Widerruf als Formular-Anfrage
-- Mein Konto API mit Alleinsorge-Nachweis Upload
-- Zahlungsweise inklusive SEPA-Option
+## Ordner
+
+- `frontend` = Website Portal für Eltern und Mitarbeiter
+- `backend` = API Server für Login, Rechnungen, Schüler, Verträge
+- `database` = SQL Struktur
+
+## Demo Logins
 
 ### Mitarbeiter
-- Login mit Personalnummer + Passwort
-- Rollenlogik:
-  - LV432085 = Leitung/Verwaltung
-  - L658934 = Lehrer
-  - B45385 = Buchhaltung
-- Verwaltung/Leitung Dashboard
-- Offene Rechnungen / neue Kündigungen / Widerrufe
-- Schülerverwaltung
-- Elternverwaltung
-- Vertragserstellung
-- Vertragsübersicht
-- Rechnungsanlage mit PDF-Upload
+- LV432085 / Start123! = Leitung / Verwaltung
+- L658934 / Start123! = Lehrer
+- B45385 / Start123! = Buchhaltung
 
-## Installation lokal
+### Eltern
+- K10001 / Start123!
 
-### 1. Datenbank erstellen
-```bash
-mysql -u root -p < database/schema.sql
-mysql -u root -p < database/seed.sql
-```
+## Start lokal
 
-### 2. Backend starten
+Backend:
 ```bash
 cd backend
-cp .env.example .env
 npm install
-npm run seed
 npm run dev
 ```
 
-### 3. Frontend starten
+Frontend:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Frontend läuft standardmäßig auf `http://localhost:5173`.
-Backend läuft auf `http://localhost:4000`.
+## Render Backend
 
-## Demo-Logins
-
-### Eltern
+Root Directory:
 ```text
-Kundennummer: K10001
-Passwort: Start123!
+backend
 ```
 
-### Mitarbeiter
+Build Command:
 ```text
-Personalnummer: LV432085
-Passwort: Start123!
-Rolle: Leitung/Verwaltung
-
-Personalnummer: L658934
-Passwort: Start123!
-Rolle: Lehrer
-
-Personalnummer: B45385
-Passwort: Start123!
-Rolle: Buchhaltung
+npm install
 ```
 
-## Wichtige Produktionshinweise
-- `JWT_SECRET` in `.env` ändern.
-- SMTP-Daten eintragen für echten Passwort-Reset.
-- HTTPS auf Hetzner per Nginx + Certbot einrichten.
-- Upload-Ordner außerhalb öffentlicher Pfade absichern, wenn sensible Dokumente produktiv genutzt werden.
-- SEPA-Mandats-PDF und Google Calendar API sind als nächste Erweiterung vorgesehen.
-
-## Beispiel SEPA-Gläubigerdaten
+Start Command:
 ```text
-Sonntags Lernzentrum Jason Sonntag
-Gläubiger-ID: DE19ZZZ00002785273
+npm start
+```
+
+Environment Variables:
+```text
+PORT=10000
+JWT_SECRET=ein-langes-geheimes-passwort
+FRONTEND_URL=https://dein-vercel-link.vercel.app
+```
+
+## Vercel Frontend
+
+Root Directory:
+```text
+frontend
+```
+
+Environment Variable:
+```text
+VITE_API_URL=https://dein-render-backend.onrender.com
 ```
