@@ -1,0 +1,22 @@
+import express from 'express';
+import { pool } from '../config/db.js';
+import { auth, requireRole } from '../middleware/auth.js';
+import { upload } from '../config/upload.js';
+import { lastSchoolDayBavaria } from '../utils/role.js';
+const router=express.Router();
+router.use(auth,requireRole('verwaltung','buchhaltung','lehrer'));
+router.get('/dashboard',async(req,res)=>{
+  const [[openInvoices]]=await pool.query('SELECT COUNT(*) count FROM invoices WHERE status IN ("offen","überfällig")');
+  const [[requests]]=await pool.query('SELECT COUNT(*) count FROM requests WHERE status="neu"');
+  res.json({role:req.user.role,openInvoices:openInvoices.count,newRequests:requests.count});
+});
+router.get('/parents',requireRole('verwaltung','buchhaltung'),async(req,res)=>{const [r]=await pool.query('SELECT id,customer_number,salutation,first_name,last_name,email,phone,city,payment_method FROM parents ORDER BY last_name');res.json(r);});
+router.post('/parents',requireRole('verwaltung'),async(req,res)=>{const b=req.body; await pool.query('INSERT INTO parents(customer_number,password_hash,salutation,first_name,last_name,email,phone,street,zip,city,sole_custody,payment_method) VALUES(?, "$2a$10$CwTycUXWue0Thq9StjUM0uJ8D6J8T8kZ8FhkRyTzJC8ci7KWGFhwW", ?,?,?,?,?,?,?,?,?,?)',[b.customerNumber,b.salutation,b.firstName,b.lastName,b.email,b.phone,b.street,b.zip,b.city,!!b.soleCustody,b.paymentMethod||'Rechnung 14 Tage']);res.status(201).json({message:'Eltern angelegt',defaultPassword:'Start123!'});});
+router.get('/students',async(req,res)=>{const [r]=await pool.query('SELECT s.*, p.last_name parent_last_name, sc.name school, t.name tariff FROM students s JOIN parents p ON s.parent_id=p.id LEFT JOIN schools sc ON s.school_id=sc.id LEFT JOIN tariffs t ON s.tariff_id=t.id ORDER BY s.name');res.json(r);});
+router.post('/students',requireRole('verwaltung'),async(req,res)=>{const b=req.body; await pool.query('INSERT INTO students(parent_id,name,birthdate,class_name,school_id,school_type,tariff_id,subject) VALUES(?,?,?,?,?,?,?,?)',[b.parentId,b.name,b.birthdate,b.className,b.schoolId,b.schoolType,b.tariffId,b.subject]);res.status(201).json({message:'Schüler angelegt'});});
+router.get('/contracts',async(req,res)=>{const [r]=await pool.query('SELECT c.*, s.name student FROM contracts c JOIN students s ON c.student_id=s.id ORDER BY c.start_date DESC');res.json(r);});
+router.post('/contracts',requireRole('verwaltung'),async(req,res)=>{const b=req.body; const year=new Date(b.startDate).getFullYear(); await pool.query('INSERT INTO contracts(contract_number,type,student_id,subject,tariff,start_date,end_date) VALUES(?,?,?,?,?,?,?)',[b.contractNumber,b.type,b.studentId,b.subject,b.tariff,b.startDate,b.endDate||lastSchoolDayBavaria(year)]);res.status(201).json({message:'Vertrag erstellt'});});
+router.get('/invoices',requireRole('verwaltung','buchhaltung'),async(req,res)=>{const [r]=await pool.query('SELECT i.*, p.last_name parent FROM invoices i JOIN parents p ON i.parent_id=p.id ORDER BY i.created_at DESC');res.json(r);});
+router.post('/invoices',requireRole('verwaltung','buchhaltung'),upload.single('pdf'),async(req,res)=>{const b=req.body; const total=Number(b.amount||0)+Number(b.travelZoneAmount||0); await pool.query('INSERT INTO invoices(parent_id,invoice_number,title,amount,travel_zone_amount,travel_zone,total,due_date,status,pdf_file) VALUES(?,?,?,?,?,?,?,?,?,?)',[b.parentId,b.invoiceNumber,b.title,b.amount,b.travelZoneAmount||0,b.travelZone||1,total,b.dueDate,b.status||'offen',req.file?.path||null]);res.status(201).json({message:'Rechnung erstellt'});});
+router.get('/requests',requireRole('verwaltung'),async(req,res)=>{const [r]=await pool.query('SELECT r.*, p.last_name parent FROM requests r LEFT JOIN parents p ON r.parent_id=p.id ORDER BY r.created_at DESC');res.json(r);});
+export default router;

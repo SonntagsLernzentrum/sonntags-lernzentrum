@@ -1,0 +1,17 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import authRoutes from './routes/auth.js';
+import parentRoutes from './routes/parent.js';
+import adminRoutes from './routes/admin.js';
+dotenv.config();
+const app=express();
+app.use(cors());
+app.use(express.json());
+app.use('/uploads',express.static(path.resolve(process.env.UPLOAD_DIR||'uploads')));
+app.get('/api/health',(req,res)=>res.json({ok:true,app:'Sonntags Lernzentrum'}));
+app.use('/api/auth',authRoutes);
+app.use('/api/parent',parentRoutes);
+app.use('/api/admin',adminRoutes);
+app.listen(process.env.PORT||4000,()=>console.log('API läuft auf Port '+(process.env.PORT||4000)));
